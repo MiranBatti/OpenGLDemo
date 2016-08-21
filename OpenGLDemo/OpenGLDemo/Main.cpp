@@ -2,7 +2,7 @@
 #include <SDL2\SDL.h>
 #include <SDL2\SDL_opengl.h>
 #include <Windows.h>
-
+#include "stb_image.h"
 
 #define GLSL(src) "#version 450 core\n" #src
 
@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 	//Initialize SDL
 	SDL_Init(SDL_INIT_EVERYTHING);
 	SDL_Init(SDL_INIT_VIDEO);
-
+	
 	//Must be set to create a window
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -34,34 +34,25 @@ int main(int argc, char *argv[])
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 
+	//Create a Vertex Buffer Object and copy the vertex data to it
 	GLuint vbo;
 	glGenBuffers(1, &vbo); //Generate 1 buffer
-
-						   //Create a Vertex Buffer Object and copy the vertex data to it
-	GLfloat vertices[] =
-	{
-		-0.5f,  0.5f, 1.0f, 0.0f, 0.0f, // Top-left
-		0.5f,  0.5f, 0.0f, 1.0f, 0.0f, // Top-right
-		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // Bottom-right
-		-0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
+	
+	GLfloat vertices[] = {
+		//  Position      Color             Texcoords
+		-0.5f,  0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // Top-left
+		0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // Top-right
+		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // Bottom-right
+		-0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f  // Bottom-left
 	};
-
-	/*
-	GLfloat vertices[] =
-	{
-	0.0f, 0.5f, 1.0f, 0.0f, 0.0f,	//Vertex 1, Red, Top-left
-	0.5f, -0.5f, 0.0f, 1.0f, 0.0f,	//Vertex 2, Blue, Top-right
-	-0.5f, -0.5f, 0.0f, 0.0f, 1.0f, //Vertex 3, Green, Bottom-righ
-	};
-	*/
-
+	
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
 	//Create an element array
 	GLuint ebo;
 	glGenBuffers(1, &ebo);
-
+	
 	GLuint elements[] =
 	{
 		0, 1, 2,
@@ -72,19 +63,20 @@ int main(int argc, char *argv[])
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
 	//Create vertex shader
-	const char* vertexSource = GLSL
-	(
-		in vec2 position;
-	in vec3 color;
+    const char* vertexSource = GLSL(
+        in vec2 position;
+        in vec3 color;
+        in vec2 texCoord;
 
-	out vec3 Color;
-
-	void main()
-	{
-		Color = color;
-		gl_Position = vec4(position, 0.0, 1.0);
-	}
-	);
+        out vec3 Color;
+        out vec2 TexCoord;
+        
+        void main() {
+            Color = color;
+            TexCoord = texCoord;
+            gl_Position = vec4(position, 0.0, 1.0);
+        }
+    );
 
 	//Compile vertex shader
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -96,13 +88,16 @@ int main(int argc, char *argv[])
 	(
 		//uniform vec3 triangleColor;
 		in vec3 Color;
+		in vec2 TexCoord;
 
-	out vec4 outColor;
+		out vec4 outColor;
 
-	void main()
-	{
-		outColor = vec4(Color, 1.0);
-	}
+		uniform sampler2D tex;
+
+		void main()
+		{
+			outColor = texture(tex, TexCoord) * vec4(Color, 1.0);
+		}
 	);
 
 	//Compile fragment shader
@@ -118,24 +113,45 @@ int main(int argc, char *argv[])
 	glLinkProgram(shaderProgram);
 	glUseProgram(shaderProgram);
 
+	//Create a texture
+	GLuint tex;
+	glGenTextures(1, &tex);
+
+	int width, height, bpp = 0;
+	unsigned char* image =
+		stbi_load("sample.png", &width, &height, &bpp, 3);
+
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+
+	//Here we wrap textures and sample them by repeating them
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	//Set wrap parameter for coordinate s to GL_REPEAT
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//Filter texture using Linear filtering for a smoother texture/image
+	//TODO: Try using mipmaps for higher quality textures
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	stbi_image_free(image);
+
 	//Specify layout of vertices
 	GLint positionAttribute = glGetAttribLocation(shaderProgram, "position");
 	glEnableVertexAttribArray(positionAttribute);
-	glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), 0);
+	glVertexAttribPointer(positionAttribute, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(GLfloat), 0);
 
 	GLint colorAttribute = glGetAttribLocation(shaderProgram, "color");
 	glEnableVertexAttribArray(colorAttribute);
-	glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(2 * sizeof(float)));
+	glVertexAttribPointer(colorAttribute, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(2 * sizeof(GLfloat)));
+
+	GLint textureAttribute = glGetAttribLocation(shaderProgram, "texCoord");
+	glEnableVertexAttribArray(textureAttribute);
+	glVertexAttribPointer(textureAttribute, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(5 * sizeof(GLfloat)));
 
 	//Main loop
 	bool running = true;
 	SDL_Event windowEvent;
 	while (running)
 	{
-		/*
-		GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
-		glUniform3f(uniColor, 1.0f, 0.0f, 0.0f); //glUniformXY, X is the number of components, Y is the type (e.g f = float, i = int, etc.), parameters sets color of triangle.
-		*/
 
 		if (SDL_PollEvent(&windowEvent))		//Check if there are any events to handle
 		{
@@ -157,10 +173,11 @@ int main(int argc, char *argv[])
 	}
 
 	SDL_Delay(1000);
-	//De-struct
+	//Destruct
 	glDeleteProgram(shaderProgram);
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
+	glDeleteTextures(1, &tex);
 	glDeleteBuffers(1, &ebo);
 	glDeleteBuffers(1, &vbo);
 	glDeleteVertexArrays(1, &vao);
