@@ -3,11 +3,13 @@
 #include <SDL2\SDL_opengl.h>
 #include <Windows.h>
 #include "stb_image.h"
+#include <chrono>
 
 #define GLSL(src) "#version 450 core\n" #src
 
 int main(int argc, char *argv[])
 {
+	auto startingTimer = std::chrono::high_resolution_clock::now();
 	//Initialize SDL
 	SDL_Init(SDL_INIT_EVERYTHING);
 	SDL_Init(SDL_INIT_VIDEO);
@@ -94,12 +96,12 @@ int main(int argc, char *argv[])
 
 		uniform sampler2D texKitten;
 		uniform sampler2D texPuppy;
+		uniform float time;
 
 		void main()
 		{
-			vec4 colKitten = texture(texKitten, TexCoord);
-			vec4 colPuppy = texture(texPuppy, TexCoord);
-			outColor = mix(colKitten, colPuppy, 0.5);
+			float factor = (sin(time * 3.0) + 1.0) / 2.0;
+			outColor = mix(texture(texKitten, TexCoord), texture(texPuppy, TexCoord), factor);
 		}
 	);
 
@@ -155,6 +157,8 @@ int main(int argc, char *argv[])
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+	GLuint uniformTimer = glGetUniformLocation(shaderProgram, "time");
+
 	//Specify layout of vertices
 	GLint positionAttribute = glGetAttribLocation(shaderProgram, "position");
 	glEnableVertexAttribArray(positionAttribute);
@@ -185,6 +189,11 @@ int main(int argc, char *argv[])
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
+
+		auto currentTime = std::chrono::high_resolution_clock::now();
+		auto totalTime = std::chrono::duration_cast<std::chrono::duration<float>>(currentTime - startingTimer).count();
+
+		glUniform1f(uniformTimer, totalTime);
 
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		//glDrawArrays(GL_TRIANGLES, 0, 3);
