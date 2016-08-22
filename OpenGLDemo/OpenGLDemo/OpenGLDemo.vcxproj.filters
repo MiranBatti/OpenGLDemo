@@ -26,9 +26,15 @@
     <ClInclude Include="stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="sample.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="sample2.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

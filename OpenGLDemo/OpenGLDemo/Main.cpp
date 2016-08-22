@@ -92,11 +92,14 @@ int main(int argc, char *argv[])
 
 		out vec4 outColor;
 
-		uniform sampler2D tex;
+		uniform sampler2D texKitten;
+		uniform sampler2D texPuppy;
 
 		void main()
 		{
-			outColor = texture(tex, TexCoord) * vec4(Color, 1.0);
+			vec4 colKitten = texture(texKitten, TexCoord);
+			vec4 colPuppy = texture(texPuppy, TexCoord);
+			outColor = mix(colKitten, colPuppy, 0.5);
 		}
 	);
 
@@ -114,15 +117,19 @@ int main(int argc, char *argv[])
 	glUseProgram(shaderProgram);
 
 	//Create a texture
-	GLuint tex;
-	glGenTextures(1, &tex);
+	GLuint textures[2];
+	glGenTextures(2, textures);
 
 	int width, height, bpp = 0;
-	unsigned char* image =
-		stbi_load("sample.png", &width, &height, &bpp, 3);
+	unsigned char* image;
 
-	glBindTexture(GL_TEXTURE_2D, tex);
+	//Load first image
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textures[0]);
+	image = stbi_load("sample.png", &width, &height, &bpp, 3);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glUniform1i(glGetUniformLocation(shaderProgram, "texKitten"), 0);
+	stbi_image_free(image);
 
 	//Here we wrap textures and sample them by repeating them
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	//Set wrap parameter for coordinate s to GL_REPEAT
@@ -132,7 +139,21 @@ int main(int argc, char *argv[])
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+	//Load second image
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, textures[1]);
+	image = stbi_load("sample2.png", &width, &height, &bpp, 3);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	glUniform1i(glGetUniformLocation(shaderProgram, "texPuppy"), 1);
 	stbi_image_free(image);
+
+	//Here we wrap textures and sample them by repeating them
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	//Set wrap parameter for coordinate s to GL_REPEAT
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//Filter texture using Linear filtering for a smoother texture/image
+	//TODO: Try using mipmaps for higher quality textures
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	//Specify layout of vertices
 	GLint positionAttribute = glGetAttribLocation(shaderProgram, "position");
@@ -177,7 +198,7 @@ int main(int argc, char *argv[])
 	glDeleteProgram(shaderProgram);
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
-	glDeleteTextures(1, &tex);
+	glDeleteTextures(2, textures);
 	glDeleteBuffers(1, &ebo);
 	glDeleteBuffers(1, &vbo);
 	glDeleteVertexArrays(1, &vao);

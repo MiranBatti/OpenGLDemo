@@ -1,4 +1,4 @@
 ﻿  Main.cpp
-c:\users\miran\git\opengldemo\opengldemo\opengldemo\main.cpp(185): warning C4551: function call missing argument list
+c:\users\miran\git\opengldemo\opengldemo\opengldemo\main.cpp(206): warning C4551: function call missing argument list
   OpenGLDemo.vcxproj -> C:\Users\Miran\git\OpenGLDemo\OpenGLDemo\x64\Debug\OpenGLDemo.exe
   OpenGLDemo.vcxproj -> C:\Users\Miran\git\OpenGLDemo\OpenGLDemo\x64\Debug\OpenGLDemo.pdb (Full PDB)
