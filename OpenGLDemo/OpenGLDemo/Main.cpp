@@ -3,11 +3,16 @@
 #include <SDL2\SDL_opengl.h>
 #include <Windows.h>
 #include "stb_image.h"
+#include <glm\glm.hpp>
+#include <glm\gtc\matrix_transform.hpp>
+#include <glm\gtc\type_ptr.hpp>
+#include <chrono>
 
 #define GLSL(src) "#version 450 core\n" #src
 
 int main(int argc, char *argv[])
 {
+	auto startingTimer = std::chrono::high_resolution_clock::now();
 	//Initialize SDL
 	SDL_Init(SDL_INIT_EVERYTHING);
 	SDL_Init(SDL_INIT_VIDEO);
@@ -20,7 +25,7 @@ int main(int argc, char *argv[])
 
 	SDL_Window* window = SDL_CreateWindow("Demo", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL); //Create the window
 	SDL_GLContext context = SDL_GL_CreateContext(window);
-
+	
 	//Initialize GLEW. Important that window context is created before init.
 	glewExperimental = GL_TRUE;
 	glewInit();
@@ -71,10 +76,12 @@ int main(int argc, char *argv[])
         out vec3 Color;
         out vec2 TexCoord;
         
+		uniform mat4 transform;
+
         void main() {
             Color = color;
             TexCoord = texCoord;
-            gl_Position = vec4(position, 0.0, 1.0);
+            gl_Position = transform * vec4(position, 0.0, 1.0);
         }
     );
 
@@ -112,9 +119,12 @@ int main(int argc, char *argv[])
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
-	glBindFragDataLocation(shaderProgram, 0, "outColor"); //Might not be necessary
+	glBindFragDataLocation(shaderProgram, 0, "outColor");
 	glLinkProgram(shaderProgram);
 	glUseProgram(shaderProgram);
+
+	//Transform matrices
+	GLint uniTranform = glGetUniformLocation(shaderProgram, "transform");
 
 	//Create a texture
 	GLuint textures[2];
@@ -173,7 +183,6 @@ int main(int argc, char *argv[])
 	SDL_Event windowEvent;
 	while (running)
 	{
-
 		if (SDL_PollEvent(&windowEvent))		//Check if there are any events to handle
 		{
 			if (windowEvent.type == SDL_QUIT)
@@ -183,11 +192,19 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		//2D transformation
+		auto currentTimer = std::chrono::high_resolution_clock::now();
+		float time = std::chrono::duration_cast<std::chrono::duration<float>>(currentTimer - startingTimer).count();
+		glm::mat4 transform;
+		transform = glm::rotate(transform, time * glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		glUniformMatrix4fv(uniTranform, 1, GL_FALSE, glm::value_ptr(transform));
+
+		//Clear screen to black
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		// Draw a rectangle from the 2 triangles using 6 indices
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		//glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		//Swap buffers
 		SDL_GL_SwapWindow(window);
