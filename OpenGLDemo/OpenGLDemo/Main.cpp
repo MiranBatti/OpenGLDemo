@@ -76,12 +76,14 @@ int main(int argc, char *argv[])
         out vec3 Color;
         out vec2 TexCoord;
         
-		uniform mat4 transform;
+		uniform mat4 model;
+		uniform mat4 view;
+		uniform mat4 project;
 
         void main() {
             Color = color;
             TexCoord = texCoord;
-            gl_Position = transform * vec4(position, 0.0, 1.0);
+            gl_Position = project * view * model * vec4(position, 0.0, 1.0);
         }
     );
 
@@ -124,7 +126,20 @@ int main(int argc, char *argv[])
 	glUseProgram(shaderProgram);
 
 	//Transform matrices
-	GLint uniTranform = glGetUniformLocation(shaderProgram, "transform");
+	GLint uniTranform = glGetUniformLocation(shaderProgram, "model");
+	
+	//Set up projection
+	glm::mat4 view = glm::lookAt(
+		glm::vec3(1.2f, 1.2f, 1.2f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f)
+	);
+	GLint uniView = glGetUniformLocation(shaderProgram, "view");
+	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+
+	glm::mat4 project = glm::perspective(glm::radians(45.0f), 800.0f / 600.0f, 1.0f, 15.0f);
+	GLint uniProject = glGetUniformLocation(shaderProgram, "project");
+	glUniformMatrix4fv(uniProject, 1, GL_FALSE, glm::value_ptr(project)); 
 
 	//Create a texture
 	GLuint textures[2];
