@@ -1,12 +1,12 @@
 #include <GL\glew.h>
 #include <SDL2\SDL.h>
 #include <SDL2\SDL_opengl.h>
-#include <Windows.h>
 #include "stb_image.h"
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 #include <glm\gtc\type_ptr.hpp>
 #include <chrono>
+#include <Windows.h>
 
 #define GLSL(src) "#version 450 core\n" #src
 
@@ -18,8 +18,8 @@ int main(int argc, char *argv[])
 	
 	//Must be set to create a window
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4); //Select OpenGL version 4.5
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
